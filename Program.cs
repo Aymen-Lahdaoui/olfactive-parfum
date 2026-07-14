@@ -2,6 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using OlfactiveParfum.Backend.Data;
 using OlfactiveParfum.Backend.Models; // Ajouté pour pouvoir manipuler la classe Parfum
 
+// ACTIVATION DU COMPORTEMENT DE COMPATIBILITÉ DES DATES POUR POSTGRESQL
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 var builder = WebApplication.CreateBuilder(args);
 
 // ============================================================

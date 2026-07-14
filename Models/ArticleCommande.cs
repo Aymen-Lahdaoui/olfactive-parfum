@@ -8,7 +8,11 @@ namespace OlfactiveParfum.Backend.Models
         public int Quantite { get; set; }
         public double PrixUnitaire { get; set; }
         public string ImageUrl { get; set; }
-        public string CommandeId { get; set; } // Clé étrangère
-        public Commande Commande { get; set; } // Navigation
+        
+        // Clé étrangère (peut être nullable si l'article est créé en même temps que la commande)
+        public string? CommandeId { get; set; } 
+        
+        // Propriété de navigation rendue nullable avec le '?' pour éviter l'erreur de validation 400
+        public Commande? Commande { get; set; } 
     }
 }
