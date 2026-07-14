@@ -21,12 +21,30 @@ namespace OlfactiveParfum.Backend.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterDto model)
         {
+            // 1. Vérifier si l'adresse email existe déjà
             if (await _context.Users.AnyAsync(u => u.Email == model.Email))
             {
                 return BadRequest(new { message = "Cette adresse électronique est déjà utilisée." });
             }
 
-            string role = model.Email.ToLower().Contains("admin") ? "Admin" : "Client";
+            string role = "Client";
+
+            // 2. Vérifier si l'utilisateur demande à être Admin
+            if (model.Email.ToLower().Contains("admin"))
+            {
+                // Vérifier s'il y a déjà UN administrateur dans la base de données
+                bool adminExists = await _context.Users.AnyAsync(u => u.Role == "Admin");
+
+                if (adminExists)
+                {
+                    // Option stricte : On refuse l'inscription pour protéger l'accès unique
+                    return BadRequest(new { message = "Un administrateur unique existe déjà. Impossible de créer un autre compte admin." });
+                    
+                    // Variante (si tu préfères) : Remplacer par 'role = "Client";' pour le forcer à être client.
+                }
+
+                role = "Admin";
+            }
 
             var user = new User
             {
