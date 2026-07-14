@@ -39,8 +39,6 @@ namespace OlfactiveParfum.Backend.Controllers
                 {
                     // Option stricte : On refuse l'inscription pour protéger l'accès unique
                     return BadRequest(new { message = "Un administrateur unique existe déjà. Impossible de créer un autre compte admin." });
-                    
-                    // Variante (si tu préfères) : Remplacer par 'role = "Client";' pour le forcer à être client.
                 }
 
                 role = "Admin";
@@ -79,6 +77,47 @@ namespace OlfactiveParfum.Backend.Controllers
             });
         }
 
+        // PUT: api/auth/update
+        [HttpPut("update")]
+        public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileDto model)
+        {
+            if (model == null || string.IsNullOrEmpty(model.AncienEmail))
+            {
+                return BadRequest(new { message = "Données de requête invalides." });
+            }
+
+            // 1. Recherche de l'utilisateur par son adresse email actuelle
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == model.AncienEmail);
+            
+            if (user == null)
+            {
+                return NotFound(new { message = "Utilisateur non trouvé." });
+            }
+
+            // 2. Vérifier si la nouvelle adresse est déjà prise par un autre compte
+            if (model.Email != model.AncienEmail)
+            {
+                var emailExiste = await _context.Users.AnyAsync(u => u.Email == model.Email);
+                if (emailExiste)
+                {
+                    return BadRequest(new { message = "Cette adresse électronique est déjà associée à un autre compte." });
+                }
+            }
+
+            // 3. Mise à jour des valeurs
+            user.Nom = model.Nom;
+            user.Email = model.Email;
+
+            _context.Users.Update(user);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { 
+                message = "Profil mis à jour avec succès.",
+                nom = user.Nom,
+                email = user.Email
+            });
+        }
+
         // GET: api/auth/users
         [HttpGet("users")]
         public async Task<IActionResult> GetAllUsers()
@@ -108,5 +147,12 @@ namespace OlfactiveParfum.Backend.Controllers
     {
         public string Email { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
+    }
+
+    public class UpdateProfileDto
+    {
+        public string Nom { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string AncienEmail { get; set; } = string.Empty;
     }
 }
