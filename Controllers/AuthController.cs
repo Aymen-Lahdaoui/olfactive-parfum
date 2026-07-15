@@ -49,7 +49,8 @@ namespace OlfactiveParfum.Backend.Controllers
                 Nom = model.Nom,
                 Email = model.Email,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.Password),
-                Role = role
+                Role = role,
+                Telephone = model.Telephone
             };
 
             _context.Users.Add(user);
@@ -133,14 +134,16 @@ namespace OlfactiveParfum.Backend.Controllers
             // 3. Mise à jour des valeurs
             user.Nom = model.Nom;
             user.Email = model.Email;
+            user.Telephone = model.Telephone;
 
             _context.Users.Update(user);
             await _context.SaveChangesAsync();
 
-            return Ok(new { 
+            return Ok(new {
                 message = "Profil mis à jour avec succès.",
                 nom = user.Nom,
-                email = user.Email
+                email = user.Email,
+                telephone = user.Telephone
             });
         }
 
@@ -167,6 +170,7 @@ namespace OlfactiveParfum.Backend.Controllers
         public string Nom { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
+        public string Telephone { get; set; } = string.Empty;
     }
 
     public class RegisterStaffDto
@@ -187,6 +191,7 @@ namespace OlfactiveParfum.Backend.Controllers
     {
         public string Nom { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
+        public string Telephone { get; set; } = string.Empty;
         public string AncienEmail { get; set; } = string.Empty;
     }
 }
