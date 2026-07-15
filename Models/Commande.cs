@@ -1,16 +1,19 @@
-using System;
-using System.Collections.Generic;
+// Modèle mis à jour : Commande.cs
+public class Commande {
+    public int Id { get; set; }
+    
+    public string ClientNom { get; set; } = string.Empty;
+    // Ajout du '?' pour rendre ces champs optionnels
+    public string? ClientAdresse { get; set; } 
+    public string? ClientTelephone { get; set; } 
+    public string ClientEmail { get; set; } = string.Empty;
+    
+    public string Statut { get; set; } = "EN_ATTENTE";
+    public DateTime DateCommande { get; set; } = DateTime.UtcNow;
 
-namespace OlfactiveParfum.Backend.Models
-{
-    public class Commande
-    {
-        public string Id { get; set; } = Guid.NewGuid().ToString(); // Génère automatiquement un ID unique si absent
-        public string ClientEmail { get; set; }
-        public string ClientNom { get; set; } // <-- Ajouté pour correspondre au frontend
-        public decimal Total { get; set; }     // <-- Ajouté pour correspondre au frontend
-        public DateTime DateCommande { get; set; }
-        public string Statut { get; set; } = "En cours";
-        public List<ArticleCommande> Articles { get; set; } = new List<ArticleCommande>();
-    }
+    public int? LivreurId { get; set; }
+    [System.Text.Json.Serialization.JsonIgnore]
+    public User? Livreur { get; set; }
+    
+    public List<ArticleCommande> Articles { get; set; } = new List<ArticleCommande>();
 }

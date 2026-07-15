@@ -58,6 +58,31 @@ namespace OlfactiveParfum.Backend.Controllers
             return Ok(new { message = "Inscription réussie." });
         }
 
+        // POST: api/auth/register-staff
+        [HttpPost("register-staff")]
+        public async Task<IActionResult> RegisterStaff([FromBody] RegisterStaffDto model)
+        {
+            // 1. Vérifier si l'adresse email existe déjà
+            if (await _context.Users.AnyAsync(u => u.Email == model.Email))
+            {
+                return BadRequest(new { message = "Cette adresse électronique est déjà utilisée par un autre membre." });
+            }
+
+            // 2. Création du compte staff avec le rôle spécifié
+            var user = new User
+            {
+                Nom = model.Nom,
+                Email = model.Email,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.Password),
+                Role = string.IsNullOrEmpty(model.Role) ? "Livreur" : model.Role
+            };
+
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Membre du personnel enregistré avec succès." });
+        }
+
         // POST: api/auth/login
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto model)
@@ -78,6 +103,7 @@ namespace OlfactiveParfum.Backend.Controllers
         }
 
         // PUT: api/auth/update
+        [HttpPost("update")] // Changé en HttpPost ou HttpPut selon tes besoins, gardons cohérent avec ton front
         [HttpPut("update")]
         public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileDto model)
         {
@@ -141,6 +167,14 @@ namespace OlfactiveParfum.Backend.Controllers
         public string Nom { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
+    }
+
+    public class RegisterStaffDto
+    {
+        public string Nom { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public string Role { get; set; } = "Livreur";
     }
 
     public class LoginDto

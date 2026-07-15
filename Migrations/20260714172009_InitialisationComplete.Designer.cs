@@ -12,8 +12,8 @@ using OlfactiveParfum.Backend.Data;
 namespace OlfactiveParfum.Backend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260714131108_UpdateCommandesModels")]
-    partial class UpdateCommandesModels
+    [Migration("20260714172009_InitialisationComplete")]
+    partial class InitialisationComplete
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -25,7 +25,7 @@ namespace OlfactiveParfum.Backend.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("OlfactiveParfum.Backend.Models.ArticleCommande", b =>
+            modelBuilder.Entity("ArticleCommande", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -33,8 +33,8 @@ namespace OlfactiveParfum.Backend.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("CommandeId")
-                        .HasColumnType("text");
+                    b.Property<int>("CommandeId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("ImageUrl")
                         .IsRequired()
@@ -47,9 +47,6 @@ namespace OlfactiveParfum.Backend.Migrations
                     b.Property<int>("ParfumId")
                         .HasColumnType("integer");
 
-                    b.Property<double>("PrixUnitaire")
-                        .HasColumnType("double precision");
-
                     b.Property<int>("Quantite")
                         .HasColumnType("integer");
 
@@ -60,9 +57,16 @@ namespace OlfactiveParfum.Backend.Migrations
                     b.ToTable("ArticlesCommandes");
                 });
 
-            modelBuilder.Entity("OlfactiveParfum.Backend.Models.Commande", b =>
+            modelBuilder.Entity("Commande", b =>
                 {
-                    b.Property<string>("Id")
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ClientAdresse")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("ClientEmail")
@@ -73,17 +77,23 @@ namespace OlfactiveParfum.Backend.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("ClientTelephone")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<DateTime>("DateCommande")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int?>("LivreurId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Statut")
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<decimal>("Total")
-                        .HasColumnType("numeric");
-
                     b.HasKey("Id");
+
+                    b.HasIndex("LivreurId");
 
                     b.ToTable("Commandes");
                 });
@@ -100,7 +110,7 @@ namespace OlfactiveParfum.Backend.Migrations
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("DateCreation")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -127,7 +137,7 @@ namespace OlfactiveParfum.Backend.Migrations
                     b.ToTable("Parfums");
                 });
 
-            modelBuilder.Entity("OlfactiveParfum.Backend.Models.User", b =>
+            modelBuilder.Entity("User", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -136,11 +146,14 @@ namespace OlfactiveParfum.Backend.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Nom")
                         .IsRequired()
@@ -159,16 +172,27 @@ namespace OlfactiveParfum.Backend.Migrations
                     b.ToTable("Users");
                 });
 
-            modelBuilder.Entity("OlfactiveParfum.Backend.Models.ArticleCommande", b =>
+            modelBuilder.Entity("ArticleCommande", b =>
                 {
-                    b.HasOne("OlfactiveParfum.Backend.Models.Commande", "Commande")
+                    b.HasOne("Commande", "Commande")
                         .WithMany("Articles")
-                        .HasForeignKey("CommandeId");
+                        .HasForeignKey("CommandeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Commande");
                 });
 
-            modelBuilder.Entity("OlfactiveParfum.Backend.Models.Commande", b =>
+            modelBuilder.Entity("Commande", b =>
+                {
+                    b.HasOne("User", "Livreur")
+                        .WithMany()
+                        .HasForeignKey("LivreurId");
+
+                    b.Navigation("Livreur");
+                });
+
+            modelBuilder.Entity("Commande", b =>
                 {
                     b.Navigation("Articles");
                 });
