@@ -60,14 +60,31 @@ namespace OlfactiveParfum.Backend.Controllers
 
             commande.LivreurId = request.LivreurId; // On utilise l'ID (int)
             commande.Statut = "Assignée";
-            
+
             await _context.SaveChangesAsync();
             return Ok(new { message = "Livreur assigné avec succès !" });
+        }
+
+        [HttpPut("{id}/statut")]
+        public async Task<IActionResult> UpdateStatut(int id, [FromBody] UpdateStatutRequest request)
+        {
+            var commande = await _context.Commandes.FindAsync(id);
+            if (commande == null) return NotFound();
+
+            commande.Statut = request.Statut;
+
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Statut mis à jour avec succès !" });
         }
     }
 
     public class AssignerLivreurRequest
     {
         public int LivreurId { get; set; } // Changé de string à int
+    }
+
+    public class UpdateStatutRequest
+    {
+        public string Statut { get; set; } = string.Empty;
     }
 }
