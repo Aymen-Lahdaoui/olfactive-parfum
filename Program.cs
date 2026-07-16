@@ -45,7 +45,15 @@ using (var scope = app.Services.CreateScope())
         var context = services.GetRequiredService<AppDbContext>();
         
         // Applique automatiquement les migrations manquantes s'il y en a
-        context.Database.Migrate();
+        try
+        {
+            context.Database.Migrate();
+        }
+        catch (Exception migrationEx)
+        {
+            var logger = services.GetRequiredService<ILogger<Program>>();
+            logger.LogWarning(migrationEx, "La migration automatique a échoué (les colonnes peuvent déjà exister). Passage au peuplement (Seeding) des données.");
+        }
 
         // Si la table Parfums est vide, on ajoute des données par défaut
         if (!context.Parfums.Any())
@@ -54,7 +62,7 @@ using (var scope = app.Services.CreateScope())
                 new Parfum 
                 { 
                     Nom = "Impression Élégante", 
-                    Description = "Un parfum boisé et ambré d'une élégance rare.", 
+                    Description = "Un sillage boisé et ambré d'une élégance rare et intemporelle.", 
                     Prix = 85.00m, 
                     Stock = 15, 
                     ImageUrl = "https://images.unsplash.com/photo-1541643600914-78b084683601" 
@@ -62,7 +70,7 @@ using (var scope = app.Services.CreateScope())
                 new Parfum 
                 { 
                     Nom = "Éclat d'Agrumes", 
-                    Description = "Une fraîcheur intense mêlant bergamote et mandarine.", 
+                    Description = "Une fraîcheur vive et tonique mariant bergamote sauvage et mandarine.", 
                     Prix = 65.50m, 
                     Stock = 22, 
                     ImageUrl = "https://images.unsplash.com/photo-1594035910387-fea47794261f" 
@@ -70,10 +78,103 @@ using (var scope = app.Services.CreateScope())
                 new Parfum 
                 { 
                     Nom = "Nuit Cuivrée", 
-                    Description = "Un sillage mystérieux de cuir, de tabac doux et de vanille.", 
+                    Description = "Un parfum mystérieux mêlant cuir noble, tabac doux et gousse de vanille.", 
                     Prix = 110.00m, 
                     Stock = 8, 
                     ImageUrl = "https://images.unsplash.com/photo-1523293182086-7651a899d37f" 
+                },
+                new Parfum 
+                { 
+                    Nom = "Or Canopée", 
+                    Description = "Un sillage solaire de jasmin impérial, de néroli et de patchouli doré.", 
+                    Prix = 145.00m, 
+                    Stock = 12, 
+                    ImageUrl = "https://images.unsplash.com/photo-1547887537-6158d64c35b3" 
+                },
+                new Parfum 
+                { 
+                    Nom = "Sable d'Oud", 
+                    Description = "Un accord somptueux d'Oud fumé, de santal crémeux et d'épices chaudes.", 
+                    Prix = 160.00m, 
+                    Stock = 6, 
+                    ImageUrl = "https://images.unsplash.com/photo-1588405748373-122b2321bc31" 
+                },
+                new Parfum 
+                { 
+                    Nom = "Rose Éternelle", 
+                    Description = "La fraîcheur d'une rose de Damas cueillie à l'aube, relevée de baies roses.", 
+                    Prix = 95.00m, 
+                    Stock = 18, 
+                    ImageUrl = "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539" 
+                },
+                new Parfum 
+                { 
+                    Nom = "Brume Indigo", 
+                    Description = "Une envolée marine salée reposant sur de la sauge officinale et du cèdre bleu.", 
+                    Prix = 115.00m, 
+                    Stock = 14, 
+                    ImageUrl = "https://images.unsplash.com/photo-1523293182086-7651a899d37f" 
+                }
+            );
+            context.SaveChanges();
+        }
+
+        // Assurer qu'il y a un large choix de parfums (ajout supplémentaire)
+        var listNouveauParfums = new List<Parfum>
+        {
+            new Parfum { Nom = "Ambre Mystique", Description = "Un élixir suave d'ambre gris, de labdanum chaleureux et de vanille de Madagascar.", Prix = 135.00m, Stock = 15, ImageUrl = "https://images.unsplash.com/photo-1541643600914-78b084683601" },
+            new Parfum { Nom = "Musc Nomade", Description = "Une caresse de musc blanc pur, de graine d'ambrette et de bois d'iris délicat.", Prix = 90.00m, Stock = 20, ImageUrl = "https://images.unsplash.com/photo-1594035910387-fea47794261f" },
+            new Parfum { Nom = "Jasmin Sacré", Description = "Une célébration du jasmin sambac, enveloppé d'encens mystique et de cire d'abeille.", Prix = 125.00m, Stock = 10, ImageUrl = "https://images.unsplash.com/photo-1523293182086-7651a899d37f" },
+            new Parfum { Nom = "Fleur de Cerisier", Description = "La poésie printanière du sakura en fleurs, agrémentée de poire juteuse et de musc poudré.", Prix = 75.00m, Stock = 18, ImageUrl = "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539" },
+            new Parfum { Nom = "Vétiver Céleste", Description = "Une fraîcheur terreuse de vétiver de Haïti, illuminée par le pamplemousse rose et la menthe fraîche.", Prix = 110.00m, Stock = 12, ImageUrl = "https://images.unsplash.com/photo-1547887537-6158d64c35b3" },
+            new Parfum { Nom = "Cuir Impérial", Description = "Une puissance cuirée affirmée, adoucie par le safran noir et la prune confite.", Prix = 155.00m, Stock = 7, ImageUrl = "https://images.unsplash.com/photo-1588405748373-122b2321bc31" },
+            new Parfum { Nom = "Élixir d'Orient", Description = "Une richesse opulente de cannelle, de patchouli sombre et de benjoin liquoreux.", Prix = 140.00m, Stock = 9, ImageUrl = "https://images.unsplash.com/photo-1594035910387-fea47794261f" },
+            new Parfum { Nom = "Soleil Néroli", Description = "Un éclat ensoleillé d'essence de néroli de Tunisie, de petit-grain et de musc blanc.", Prix = 98.00m, Stock = 14, ImageUrl = "https://images.unsplash.com/photo-1541643600914-78b084683601" },
+            new Parfum { Nom = "Or Canopée", Description = "Un sillage solaire de jasmin impérial, de néroli et de patchouli doré.", Prix = 145.00m, Stock = 12, ImageUrl = "https://images.unsplash.com/photo-1547887537-6158d64c35b3" },
+            new Parfum { Nom = "Sable d'Oud", Description = "Un accord somptueux d'Oud fumé, de santal crémeux et d'épices chaudes.", Prix = 160.00m, Stock = 6, ImageUrl = "https://images.unsplash.com/photo-1588405748373-122b2321bc31" },
+            new Parfum { Nom = "Rose Éternelle", Description = "La fraîcheur d'une rose de Damas cueillie à l'aube, relevée de baies roses.", Prix = 95.00m, Stock = 18, ImageUrl = "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539" },
+            new Parfum { Nom = "Brume Indigo", Description = "Une envolée marine salée reposant sur de la sauge officinale et du cèdre bleu.", Prix = 115.00m, Stock = 14, ImageUrl = "https://images.unsplash.com/photo-1523293182086-7651a899d37f" }
+        };
+
+        foreach (var p in listNouveauParfums)
+        {
+            if (!context.Parfums.Any(x => x.Nom == p.Nom))
+            {
+                context.Parfums.Add(p);
+            }
+        }
+        context.SaveChanges();
+
+        // Si la table des utilisateurs est vide, on ajoute des comptes de test par défaut
+        if (!context.Users.Any())
+        {
+            context.Users.AddRange(
+                new User
+                {
+                    Nom = "Maison Admin",
+                    Email = "admin@olfactive.com",
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123!"),
+                    Role = "Admin",
+                    Telephone = "+33699887766",
+                    IsActive = true
+                },
+                new User
+                {
+                    Nom = "Jean Livreur",
+                    Email = "livreur.jean@olfactive.com",
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("Livreur123!"),
+                    Role = "Livreur",
+                    Telephone = "+33612345678",
+                    IsActive = true
+                },
+                new User
+                {
+                    Nom = "Aymen Staff",
+                    Email = "staff.aymen@olfactive.com",
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("Staff123!"),
+                    Role = "Personnel",
+                    Telephone = "+212645582265",
+                    IsActive = true
                 }
             );
             context.SaveChanges();
@@ -85,8 +186,6 @@ using (var scope = app.Services.CreateScope())
         logger.LogError(ex, "Une erreur est survenue lors du peuplement de la base de données.");
     }
 }
-
-// ============================================================
 // 3. CONFIGURATION DU PIPELINE HTTP (Middlewares)
 // ============================================================
 

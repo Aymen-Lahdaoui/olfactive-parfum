@@ -27,9 +27,22 @@ namespace OlfactiveParfum.Backend.Controllers
                 return BadRequest(new { message = "Cette adresse électronique est déjà utilisée." });
             }
 
+            // 2. Validation stricte du numéro de téléphone
+            if (string.IsNullOrEmpty(model.Telephone))
+            {
+                return BadRequest(new { message = "Le numéro de téléphone est obligatoire." });
+            }
+
+            // Regex stricte pour Maroc (+212), France (+33), Espagne (+34)
+            var phoneRegex = new System.Text.RegularExpressions.Regex(@"^\+(?:212[567]\d{8}|33[1-9]\d{8}|34[679]\d{8})$");
+            if (!phoneRegex.IsMatch(model.Telephone))
+            {
+                return BadRequest(new { message = "Le numéro de téléphone n'est pas valide ou réel." });
+            }
+
             string role = "Client";
 
-            // 2. Vérifier si l'utilisateur demande à être Admin
+            // 3. Vérifier si l'utilisateur demande à être Admin
             if (model.Email.ToLower().Contains("admin"))
             {
                 // Vérifier s'il y a déjà UN administrateur dans la base de données
@@ -99,7 +112,8 @@ namespace OlfactiveParfum.Backend.Controllers
                 id = user.Id, 
                 nom = user.Nom, 
                 email = user.Email, 
-                role = user.Role 
+                role = user.Role,
+                telephone = user.Telephone
             });
         }
 

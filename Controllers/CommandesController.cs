@@ -76,6 +76,19 @@ namespace OlfactiveParfum.Backend.Controllers
             await _context.SaveChangesAsync();
             return Ok(new { message = "Statut mis à jour avec succès !" });
         }
+
+        [HttpPut("{id}/annuler")]
+        public async Task<IActionResult> AnnulerCommande(int id, [FromBody] AnnulerCommandeRequest request)
+        {
+            var commande = await _context.Commandes.FindAsync(id);
+            if (commande == null) return NotFound();
+
+            commande.Statut = "Annulé";
+            commande.CommentaireAnnulation = request.Commentaire;
+
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Commande annulée avec succès !" });
+        }
     }
 
     public class AssignerLivreurRequest
@@ -86,5 +99,10 @@ namespace OlfactiveParfum.Backend.Controllers
     public class UpdateStatutRequest
     {
         public string Statut { get; set; } = string.Empty;
+    }
+
+    public class AnnulerCommandeRequest
+    {
+        public string Commentaire { get; set; } = string.Empty;
     }
 }
