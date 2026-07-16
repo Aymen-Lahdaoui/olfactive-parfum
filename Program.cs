@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using OlfactiveParfum.Backend.Data;
 using OlfactiveParfum.Backend.Models; // Ajouté pour pouvoir manipuler la classe Parfum
+using OlfactiveParfum.Backend.Services;
 
 // ACTIVATION DU COMPORTEMENT DE COMPATIBILITÉ DES DATES POUR POSTGRESQL
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
@@ -29,6 +30,12 @@ builder.Services.AddCors(options =>
 // PRISE EN CHARGE DES CONTRÔLEURS (Indispensable pour ParfumsController)
 builder.Services.AddControllers();
 
+// Service Email pour les notifications automatiques
+builder.Services.AddScoped<IEmailService, EmailService>();
+
+// Service de notifications in-app
+builder.Services.AddScoped<INotificationService, NotificationService>();
+
 // Support OpenAPI/.NET 9 (Généré par défaut)
 builder.Services.AddOpenApi();
 
@@ -53,6 +60,29 @@ using (var scope = app.Services.CreateScope())
         {
             var logger = services.GetRequiredService<ILogger<Program>>();
             logger.LogWarning(migrationEx, "La migration automatique a échoué (les colonnes peuvent déjà exister). Passage au peuplement (Seeding) des données.");
+        }
+
+        // ✅ Création directe de la table Notifications si elle n'existe pas encore
+        try
+        {
+            context.Database.ExecuteSqlRaw(@"
+                CREATE TABLE IF NOT EXISTS ""Notifications"" (
+                    ""Id""          SERIAL PRIMARY KEY,
+                    ""UserEmail""   TEXT        NOT NULL DEFAULT '',
+                    ""Titre""       TEXT        NOT NULL DEFAULT '',
+                    ""Message""     TEXT        NOT NULL DEFAULT '',
+                    ""Type""        TEXT        NOT NULL DEFAULT 'info',
+                    ""CommandeId""  INTEGER     NULL,
+                    ""IsRead""      BOOLEAN     NOT NULL DEFAULT FALSE,
+                    ""CreatedAt""   TIMESTAMP   NOT NULL DEFAULT NOW()
+                );
+                CREATE INDEX IF NOT EXISTS ""IX_Notifications_UserEmail"" ON ""Notifications"" (""UserEmail"");
+            ");
+        }
+        catch (Exception sqlEx)
+        {
+            var logger = services.GetRequiredService<ILogger<Program>>();
+            logger.LogWarning(sqlEx, "Création de la table Notifications ignorée (peut déjà exister).");
         }
 
         // Si la table Parfums est vide, on ajoute des données par défaut

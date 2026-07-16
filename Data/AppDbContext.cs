@@ -9,7 +9,8 @@ namespace OlfactiveParfum.Backend.Data
 
         public DbSet<User> Users { get; set; }
         public DbSet<Parfum> Parfums { get; set; }
-        public DbSet<Commande> Commandes { get; set; } // L'erreur disparaîtra si le "using" ci-dessus est correct
+        public DbSet<Commande> Commandes { get; set; }
         public DbSet<ArticleCommande> ArticlesCommandes { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
     }
 }

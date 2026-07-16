@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OlfactiveParfum.Backend.Data;
 using OlfactiveParfum.Backend.Models;
+using OlfactiveParfum.Backend.Services;
 
 namespace OlfactiveParfum.Backend.Controllers
 {
@@ -10,10 +11,14 @@ namespace OlfactiveParfum.Backend.Controllers
     public class StaffOrderController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly IEmailService _emailService;
+        private readonly INotificationService _notificationService;
 
-        public StaffOrderController(AppDbContext context)
+        public StaffOrderController(AppDbContext context, IEmailService emailService, INotificationService notificationService)
         {
-            _context = context;
+            _context             = context;
+            _emailService        = emailService;
+            _notificationService = notificationService;
         }
 
         // GET: api/staff/orders
@@ -34,7 +39,7 @@ namespace OlfactiveParfum.Backend.Controllers
                     c.Statut,
                     c.DateCommande,
                     c.LivreurId,
-                    LivreurNom = c.Livreur != null ? c.Livreur.Nom : null,
+                    LivreurNom    = c.Livreur != null ? c.Livreur.Nom : null,
                     ArticlesCount = c.Articles.Count
                 })
                 .ToListAsync();
@@ -48,12 +53,25 @@ namespace OlfactiveParfum.Backend.Controllers
         {
             var commande = await _context.Commandes.FindAsync(id);
             if (commande == null)
-            {
                 return NotFound(new { message = "Commande non trouvée." });
-            }
 
             commande.Statut = request.NewStatus;
             await _context.SaveChangesAsync();
+
+            var (titre, message, type) = request.NewStatus switch
+            {
+                "En préparation"        => ("Commande en préparation 🧴", $"Votre commande #{commande.Id} est en cours de préparation.", "info"),
+                "En cours de livraison" => ("Commande en route ! 🚚",     $"Votre commande #{commande.Id} a été expédiée et est en chemin.", "info"),
+                "Livré"                 => ("Commande livrée ✅",          $"Votre commande #{commande.Id} a été livrée avec succès !", "success"),
+                "Annulé"                => ("Commande annulée ❌",         $"Votre commande #{commande.Id} a malheureusement été annulée.", "error"),
+                _                       => ("Mise à jour 📦",              $"Statut de la commande #{commande.Id} : {request.NewStatus}", "info")
+            };
+
+            // 🔔 Notification in-app au client
+            await _notificationService.CreateAsync(commande.ClientEmail, titre, message, type, commande.Id);
+
+            // ✉️ Email au client
+            _ = _emailService.SendOrderStatusUpdateAsync(commande.ClientEmail, commande.ClientNom, commande.Id, request.NewStatus);
 
             return Ok(new { message = "Statut de la commande mis à jour avec succès.", statut = commande.Statut });
         }
@@ -64,29 +82,28 @@ namespace OlfactiveParfum.Backend.Controllers
         {
             var commande = await _context.Commandes.FindAsync(id);
             if (commande == null)
-            {
                 return NotFound(new { message = "Commande non trouvée." });
-            }
 
-            // Vérifier si le livreur existe
             var livreur = await _context.Users.FindAsync(request.LivreurId);
             if (livreur == null)
-            {
                 return BadRequest(new { message = "Livreur non trouvé." });
-            }
 
             if (livreur.Role != "Livreur")
-            {
                 return BadRequest(new { message = "L'utilisateur sélectionné n'est pas un livreur." });
-            }
 
             commande.LivreurId = request.LivreurId;
             await _context.SaveChangesAsync();
 
-            return Ok(new { 
-                message = "Commande assignée au livreur avec succès.", 
-                livreurNom = livreur.Nom 
-            });
+            // 🔔 Notifier le livreur qu'une commande lui est assignée
+            await _notificationService.CreateAsync(
+                livreur.Email,
+                "Nouvelle livraison assignée 📦",
+                $"La commande #{commande.Id} pour {commande.ClientNom} vous a été assignée.",
+                "info",
+                commande.Id
+            );
+
+            return Ok(new { message = "Commande assignée au livreur avec succès.", livreurNom = livreur.Nom });
         }
 
         // GET: api/staff/livreurs
@@ -95,12 +112,7 @@ namespace OlfactiveParfum.Backend.Controllers
         {
             var livreurs = await _context.Users
                 .Where(u => u.Role == "Livreur" && u.IsActive)
-                .Select(u => new
-                {
-                    u.Id,
-                    u.Nom,
-                    u.Email
-                })
+                .Select(u => new { u.Id, u.Nom, u.Email })
                 .OrderBy(u => u.Nom)
                 .ToListAsync();
 
