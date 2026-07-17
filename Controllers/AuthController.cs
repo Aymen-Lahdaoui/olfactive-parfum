@@ -11,10 +11,12 @@ namespace OlfactiveParfum.Backend.Controllers
     public class AuthController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly Services.IAuditLogService _auditLogService;
 
-        public AuthController(AppDbContext context)
+        public AuthController(AppDbContext context, Services.IAuditLogService auditLogService)
         {
             _context = context;
+            _auditLogService = auditLogService;
         }
 
         // POST: api/auth/register
@@ -69,6 +71,8 @@ namespace OlfactiveParfum.Backend.Controllers
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
+            await _auditLogService.CreateLogAsync(user.Email, user.Nom, "INSCRIPTION", $"Nouveau compte client enregistré au nom de {user.Nom} ({user.Email}).");
+
             return Ok(new { message = "Inscription réussie." });
         }
 
@@ -93,6 +97,8 @@ namespace OlfactiveParfum.Backend.Controllers
 
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
+
+            await _auditLogService.CreateLogAsync("admin@olfactive.com", "Administrateur", "COLLABORATEUR_CREATION", $"Nouveau collaborateur créé : {user.Nom} avec le rôle {user.Role}.");
 
             return Ok(new { message = "Membre du personnel enregistré avec succès." });
         }
@@ -176,6 +182,22 @@ namespace OlfactiveParfum.Backend.Controllers
                 .ToListAsync();
                 
             return Ok(users);
+        }
+
+        // DELETE: api/auth/users/{email} — Supprimer un collaborateur
+        [HttpDelete("users/{email}")]
+        public async Task<IActionResult> DeleteUser(string email)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == email.ToLower());
+            if (user == null) 
+                return NotFound(new { message = "Utilisateur non trouvé." });
+
+            _context.Users.Remove(user);
+            await _context.SaveChangesAsync();
+
+            await _auditLogService.CreateLogAsync("admin@olfactive.com", "Administrateur", "COLLABORATEUR_SUPPRESSION", $"Suppression du collaborateur {user.Nom} ({user.Role}, {user.Email}) de l'équipe.");
+
+            return Ok(new { message = "Collaborateur supprimé avec succès." });
         }
     }
 

@@ -36,6 +36,9 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 // Service de notifications in-app
 builder.Services.AddScoped<INotificationService, NotificationService>();
 
+// Service de journalisation des activités (Audit Logs)
+builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+
 // Support OpenAPI/.NET 9 (Généré par défaut)
 builder.Services.AddOpenApi();
 
@@ -83,6 +86,50 @@ using (var scope = app.Services.CreateScope())
         {
             var logger = services.GetRequiredService<ILogger<Program>>();
             logger.LogWarning(sqlEx, "Création de la table Notifications ignorée (peut déjà exister).");
+        }
+
+        // ✅ Création directe de la table AvisLivreurs si elle n'existe pas encore
+        try
+        {
+            context.Database.ExecuteSqlRaw(@"
+                CREATE TABLE IF NOT EXISTS ""AvisLivreurs"" (
+                    ""Id""          SERIAL PRIMARY KEY,
+                    ""LivreurId""   INTEGER     NOT NULL,
+                    ""ClientEmail"" TEXT        NOT NULL DEFAULT '',
+                    ""ClientNom""   TEXT        NOT NULL DEFAULT '',
+                    ""Note""        INTEGER     NOT NULL DEFAULT 5,
+                    ""Commentaire"" TEXT        NOT NULL DEFAULT '',
+                    ""CommandeId""  INTEGER     NOT NULL DEFAULT 0,
+                    ""DateAvis""    TIMESTAMP   NOT NULL DEFAULT NOW()
+                );
+                CREATE INDEX IF NOT EXISTS ""IX_AvisLivreurs_LivreurId"" ON ""AvisLivreurs"" (""LivreurId"");
+            ");
+        }
+        catch (Exception sqlExAvis)
+        {
+            var logger = services.GetRequiredService<ILogger<Program>>();
+            logger.LogWarning(sqlExAvis, "Création de la table AvisLivreurs ignorée (peut déjà exister).");
+        }
+
+        // ✅ Création directe de la table AuditLogs si elle n'existe pas encore
+        try
+        {
+            context.Database.ExecuteSqlRaw(@"
+                CREATE TABLE IF NOT EXISTS ""AuditLogs"" (
+                    ""Id""          SERIAL PRIMARY KEY,
+                    ""DateAction""  TIMESTAMP   NOT NULL DEFAULT NOW(),
+                    ""UserEmail""   TEXT        NOT NULL DEFAULT '',
+                    ""UserNom""     TEXT        NOT NULL DEFAULT '',
+                    ""Action""      TEXT        NOT NULL DEFAULT '',
+                    ""Description""  TEXT        NOT NULL DEFAULT ''
+                );
+                CREATE INDEX IF NOT EXISTS ""IX_AuditLogs_DateAction"" ON ""AuditLogs"" (""DateAction"");
+            ");
+        }
+        catch (Exception sqlExAudit)
+        {
+            var logger = services.GetRequiredService<ILogger<Program>>();
+            logger.LogWarning(sqlExAudit, "Création de la table AuditLogs ignorée (peut déjà exister).");
         }
 
         // Si la table Parfums est vide, on ajoute des données par défaut

@@ -15,12 +15,14 @@ namespace OlfactiveParfum.Backend.Controllers
         private readonly AppDbContext _context;
         private readonly IEmailService _emailService;
         private readonly INotificationService _notificationService;
+        private readonly IAuditLogService _auditLogService;
 
-        public CommandesController(AppDbContext context, IEmailService emailService, INotificationService notificationService)
+        public CommandesController(AppDbContext context, IEmailService emailService, INotificationService notificationService, IAuditLogService auditLogService)
         {
             _context             = context;
             _emailService        = emailService;
             _notificationService = notificationService;
+            _auditLogService     = auditLogService;
         }
 
         [HttpGet]
@@ -35,6 +37,23 @@ namespace OlfactiveParfum.Backend.Controllers
                 query = query.Where(c => c.LivreurId == livreurId.Value);
 
             var result = await query.OrderByDescending(c => c.DateCommande).ToListAsync();
+
+            // Populate LivreurNom manually to avoid circular refs and BDD migrations
+            var tempLivreurIds = result.Where(c => c.LivreurId.HasValue).Select(c => c.LivreurId!.Value).Distinct().ToList();
+            if (tempLivreurIds.Any())
+            {
+                var map = await _context.Users
+                    .Where(u => tempLivreurIds.Contains(u.Id))
+                    .ToDictionaryAsync(u => u.Id, u => u.Nom);
+                foreach (var c in result)
+                {
+                    if (c.LivreurId.HasValue && map.TryGetValue(c.LivreurId.Value, out var name))
+                    {
+                        c.LivreurNom = name;
+                    }
+                }
+            }
+
             return Ok(result);
         }
 
@@ -50,11 +69,11 @@ namespace OlfactiveParfum.Backend.Controllers
             _context.Commandes.Add(nouvelleCommande);
             await _context.SaveChangesAsync();
 
-            // 🔔 Notification in-app de confirmation
+            // Notification in-app de confirmation de commande
             await _notificationService.CreateAsync(
                 nouvelleCommande.ClientEmail,
-                "Commande confirmée ✨",
-                $"Votre commande #{nouvelleCommande.Id} a bien été reçue et est en cours de traitement.",
+                "Confirmation de commande",
+                $"Votre commande n°{nouvelleCommande.Id} a bien été enregistrée. Notre équipe prendra en charge votre demande dans les meilleurs délais.",
                 "success",
                 nouvelleCommande.Id
             );
@@ -67,6 +86,8 @@ namespace OlfactiveParfum.Backend.Controllers
                 nouvelleCommande.Articles.Select(a => $"{a.Nom} × {a.Quantite}").ToList(),
                 0m
             );
+
+            await _auditLogService.CreateLogAsync(nouvelleCommande.ClientEmail, nouvelleCommande.ClientNom, "COMMANDE_CREATION", $"Commande n°{nouvelleCommande.Id} enregistrée par le client {nouvelleCommande.ClientNom}.");
 
             return Ok(nouvelleCommande);
         }
@@ -81,6 +102,9 @@ namespace OlfactiveParfum.Backend.Controllers
             commande.Statut    = "Assignée";
 
             await _context.SaveChangesAsync();
+
+            await _auditLogService.CreateLogAsync("admin@olfactive.com", "Administrateur", "COMMANDE_ASSIGNATION", $"La commande n°{commande.Id} a été attribuée au livreur ID: {request.LivreurId}.");
+
             return Ok(new { message = "Livreur assigné avec succès !" });
         }
 
@@ -102,7 +126,6 @@ namespace OlfactiveParfum.Backend.Controllers
             // 🔔 Notification au CLIENT
             await _notificationService.CreateAsync(commande.ClientEmail, titre, message, type, commande.Id);
 
-            // 🔔 Notification au LIVREUR s'il est assigné
             if (commande.LivreurId.HasValue)
             {
                 var livreur = await _context.Users.FindAsync(commande.LivreurId.Value);
@@ -111,20 +134,20 @@ namespace OlfactiveParfum.Backend.Controllers
                     var (livreurTitre, livreurMessage) = newStatut switch
                     {
                         "En cours de livraison" => (
-                            "Prise en charge confirmée 🚚",
-                            $"Vous avez pris en charge la commande #{commande.Id} de {commande.ClientNom}. Bonne livraison !"
+                            "Prise en charge de livraison",
+                            $"Vous avez pris en charge la commande n°{commande.Id} au nom de {commande.ClientNom}. Merci de procéder à la livraison selon les instructions."
                         ),
                         "Livré" => (
-                            "Livraison terminée ✅",
-                            $"La commande #{commande.Id} a bien été marquée comme livrée. Merci !"
+                            "Livraison finalisée",
+                            $"La commande n°{commande.Id} a été confirmée comme livrée. Merci pour votre service."
                         ),
                         "Annulé" => (
-                            "Livraison annulée ❌",
-                            $"La commande #{commande.Id} a été annulée."
+                            "Livraison annulée",
+                            $"La commande n°{commande.Id} qui vous était attribuée a été annulée. Aucune action n'est requise de votre part."
                         ),
                         _ => (
-                            $"Commande #{commande.Id} mise à jour",
-                            $"Statut de la commande #{commande.Id} : {newStatut}"
+                            $"Mise à jour — Commande n°{commande.Id}",
+                            $"Le statut de la commande n°{commande.Id} a été mis à jour : {newStatut}."
                         )
                     };
                     await _notificationService.CreateAsync(livreur.Email, livreurTitre, livreurMessage, type, commande.Id);
@@ -133,6 +156,8 @@ namespace OlfactiveParfum.Backend.Controllers
 
             // ✉️ Email au client
             _ = _emailService.SendOrderStatusUpdateAsync(commande.ClientEmail, commande.ClientNom, commande.Id, newStatut);
+
+            await _auditLogService.CreateLogAsync("système@olfactive.com", "Système", "COMMANDE_STATUT_MAJ", $"Changement de statut pour la commande n°{commande.Id} : '{newStatut}'.");
 
             return Ok(new { message = "Statut mis à jour avec succès !" });
         }
@@ -148,19 +173,21 @@ namespace OlfactiveParfum.Backend.Controllers
 
             await _context.SaveChangesAsync();
 
-            // 🔔 Notification in-app
+            // Notification in-app — annulation de commande
             await _notificationService.CreateAsync(
                 commande.ClientEmail,
-                "Commande annulée ❌",
+                "Annulation de commande",
                 string.IsNullOrEmpty(request.Commentaire)
-                    ? $"Votre commande #{commande.Id} a été annulée."
-                    : $"Votre commande #{commande.Id} a été annulée. Raison : {request.Commentaire}",
+                    ? $"Nous vous informons que votre commande n°{commande.Id} a été annulée. Pour toute question, veuillez contacter notre service client."
+                    : $"Votre commande n°{commande.Id} a été annulée. Motif communiqué : {request.Commentaire}. Nous restons à votre disposition pour tout renseignement.",
                 "error",
                 commande.Id
             );
 
             // ✉️ Email
             _ = _emailService.SendOrderStatusUpdateAsync(commande.ClientEmail, commande.ClientNom, commande.Id, "Annulé", request.Commentaire);
+
+            await _auditLogService.CreateLogAsync(commande.ClientEmail, commande.ClientNom, "COMMANDE_ANNULATION", $"La commande n°{commande.Id} a été annulée. Raison : {request.Commentaire}");
 
             return Ok(new { message = "Commande annulée avec succès !" });
         }
@@ -169,11 +196,11 @@ namespace OlfactiveParfum.Backend.Controllers
         {
             return statut switch
             {
-                "En préparation"        => ("Commande en préparation 🧴", $"Votre commande #{commandeId} est en cours de préparation par notre équipe.", "info"),
-                "En cours de livraison" => ("Commande en route ! 🚚",     $"Votre commande #{commandeId} est en chemin vers vous.", "info"),
-                "Livré"                 => ("Commande livrée ✅",          $"Votre commande #{commandeId} a été livrée avec succès. Profitez de votre fragrance !", "success"),
-                "Annulé"                => ("Commande annulée ❌",         $"Votre commande #{commandeId} a été annulée.", "error"),
-                _                       => ("Mise à jour de commande 📦",  $"Le statut de votre commande #{commandeId} a été mis à jour : {statut}.", "info")
+                "En préparation"        => ("Commande en cours de préparation",   $"Votre commande n°{commandeId} est actuellement en cours de préparation par nos équipes. Vous serez notifié dès l'expédition.",  "info"),
+                "En cours de livraison" => ("Commande expédiée",                  $"Votre commande n°{commandeId} a été confiée à notre service de livraison et est en acheminement vers votre adresse.",          "info"),
+                "Livré"                 => ("Commande livrée avec succès",         $"Votre commande n°{commandeId} a été remise à l'adresse indiquée. Nous vous souhaitons une excellente expérience olfactive.",  "success"),
+                "Annulé"                => ("Annulation de commande",              $"Votre commande n°{commandeId} a été annulée. Notre service client reste à votre disposition pour tout complément d'information.", "error"),
+                _                       => ("Mise à jour de votre commande",       $"Le statut de votre commande n°{commandeId} a été mis à jour : {statut}.",                                                         "info")
             };
         }
     }

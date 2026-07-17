@@ -12,5 +12,7 @@ namespace OlfactiveParfum.Backend.Data
         public DbSet<Commande> Commandes { get; set; }
         public DbSet<ArticleCommande> ArticlesCommandes { get; set; }
         public DbSet<Notification> Notifications { get; set; }
+        public DbSet<AvisLivreur> AvisLivreurs { get; set; }
+        public DbSet<AuditLog> AuditLogs { get; set; }
     }
 }

@@ -12,10 +12,12 @@ namespace OlfactiveParfum.Backend.Controllers
     public class ParfumsController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly Services.IAuditLogService _auditLogService;
 
-        public ParfumsController(AppDbContext context)
+        public ParfumsController(AppDbContext context, Services.IAuditLogService auditLogService)
         {
             _context = context;
+            _auditLogService = auditLogService;
         }
 
         [HttpGet]
@@ -29,6 +31,8 @@ namespace OlfactiveParfum.Backend.Controllers
         {
             _context.Parfums.Add(parfum);
             await _context.SaveChangesAsync();
+
+            await _auditLogService.CreateLogAsync("admin@olfactive.com", "Administrateur", "PRODUIT_AJOUT", $"Ajout du produit '{parfum.Nom}' au catalogue (Prix : {parfum.Prix} €).");
 
             return CreatedAtAction(nameof(GetParfums), new { id = parfum.Id }, parfum);
         }
@@ -49,10 +53,13 @@ namespace OlfactiveParfum.Backend.Controllers
 
             parfumExistant.Nom = parfum.Nom;
             parfumExistant.Description = parfum.Description;
+            parfumExistant.Prix = parfum.Prix;
+            parfumExistant.Stock = parfum.Stock;
 
             try
             {
                 await _context.SaveChangesAsync();
+                await _auditLogService.CreateLogAsync("admin@olfactive.com", "Administrateur", "PRODUIT_MAJ", $"Mise à jour du produit n°{id} : '{parfum.Nom}' (Prix : {parfum.Prix} €, Stock : {parfum.Stock}).");
             }
             catch (DbUpdateConcurrencyException)
             {

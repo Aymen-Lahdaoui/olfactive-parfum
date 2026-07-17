@@ -15,6 +15,9 @@ public class Commande {
     [System.Text.Json.Serialization.JsonIgnore]
     public User? Livreur { get; set; }
 
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public string? LivreurNom { get; set; }
+
     public string? CommentaireAnnulation { get; set; }
 
     public List<ArticleCommande> Articles { get; set; } = new List<ArticleCommande>();

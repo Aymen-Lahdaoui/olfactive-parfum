@@ -60,11 +60,11 @@ namespace OlfactiveParfum.Backend.Controllers
 
             var (titre, message, type) = request.NewStatus switch
             {
-                "En préparation"        => ("Commande en préparation 🧴", $"Votre commande #{commande.Id} est en cours de préparation.", "info"),
-                "En cours de livraison" => ("Commande en route ! 🚚",     $"Votre commande #{commande.Id} a été expédiée et est en chemin.", "info"),
-                "Livré"                 => ("Commande livrée ✅",          $"Votre commande #{commande.Id} a été livrée avec succès !", "success"),
-                "Annulé"                => ("Commande annulée ❌",         $"Votre commande #{commande.Id} a malheureusement été annulée.", "error"),
-                _                       => ("Mise à jour 📦",              $"Statut de la commande #{commande.Id} : {request.NewStatus}", "info")
+                "En préparation"        => ("Commande en cours de préparation",   $"Votre commande n°{commande.Id} est actuellement prise en charge par nos équipes. Vous serez informé dès la mise en expédition.",              "info"),
+                "En cours de livraison" => ("Commande expédiée",                  $"Votre commande n°{commande.Id} a été remise à notre service de livraison et est en cours d'acheminement vers votre adresse.",             "info"),
+                "Livré"                 => ("Commande livrée avec succès",         $"Votre commande n°{commande.Id} a été remise à l'adresse indiquée. Nous vous souhaitons une très belle expérience olfactive.",             "success"),
+                "Annulé"                => ("Annulation de commande",              $"Nous vous informons que votre commande n°{commande.Id} a été annulée. Notre service client reste à votre disposition pour tout renseignement.", "error"),
+                _                       => ("Mise à jour de votre commande",       $"Le statut de votre commande n°{commande.Id} a été mis à jour : {request.NewStatus}.",                                                           "info")
             };
 
             // 🔔 Notification in-app au client
@@ -94,11 +94,11 @@ namespace OlfactiveParfum.Backend.Controllers
             commande.LivreurId = request.LivreurId;
             await _context.SaveChangesAsync();
 
-            // 🔔 Notifier le livreur qu'une commande lui est assignée
+            // Notification au livreur — nouvelle assignation
             await _notificationService.CreateAsync(
                 livreur.Email,
-                "Nouvelle livraison assignée 📦",
-                $"La commande #{commande.Id} pour {commande.ClientNom} vous a été assignée.",
+                "Nouvelle mission de livraison",
+                $"La commande n°{commande.Id} destinée à {commande.ClientNom} vous a été attribuée. Veuillez prendre contact avec notre équipe pour les détails de livraison.",
                 "info",
                 commande.Id
             );
