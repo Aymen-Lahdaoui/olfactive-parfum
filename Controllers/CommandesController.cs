@@ -118,7 +118,35 @@ namespace OlfactiveParfum.Backend.Controllers
             var commande = await _context.Commandes.FindAsync(id);
             if (commande == null) return NotFound();
 
+            var oldStatut = commande.Statut;
             commande.Statut = newStatut;
+
+            // Déduction ou restauration automatique du stock
+            if (oldStatut != "Livré" && newStatut == "Livré")
+            {
+                var articles = await _context.ArticlesCommandes.Where(a => a.CommandeId == id).ToListAsync();
+                foreach (var art in articles)
+                {
+                    var parfum = await _context.Parfums.FindAsync(art.ParfumId);
+                    if (parfum != null)
+                    {
+                        parfum.Stock = Math.Max(0, parfum.Stock - art.Quantite);
+                    }
+                }
+            }
+            else if (oldStatut == "Livré" && newStatut != "Livré")
+            {
+                var articles = await _context.ArticlesCommandes.Where(a => a.CommandeId == id).ToListAsync();
+                foreach (var art in articles)
+                {
+                    var parfum = await _context.Parfums.FindAsync(art.ParfumId);
+                    if (parfum != null)
+                    {
+                        parfum.Stock += art.Quantite;
+                    }
+                }
+            }
+
             await _context.SaveChangesAsync();
 
             var (titre, message, type) = GetStatusNotificationContent(newStatut, commande.Id);
@@ -181,8 +209,22 @@ namespace OlfactiveParfum.Backend.Controllers
             var commande = await _context.Commandes.FindAsync(id);
             if (commande == null) return NotFound();
 
+            var oldStatut = commande.Statut;
             commande.Statut                = "Annulé";
             commande.CommentaireAnnulation = request.Commentaire;
+
+            if (oldStatut == "Livré")
+            {
+                var articles = await _context.ArticlesCommandes.Where(a => a.CommandeId == id).ToListAsync();
+                foreach (var art in articles)
+                {
+                    var parfum = await _context.Parfums.FindAsync(art.ParfumId);
+                    if (parfum != null)
+                    {
+                        parfum.Stock += art.Quantite;
+                    }
+                }
+            }
 
             await _context.SaveChangesAsync();
 
