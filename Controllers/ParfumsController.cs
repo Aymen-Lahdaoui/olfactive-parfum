@@ -32,7 +32,7 @@ namespace OlfactiveParfum.Backend.Controllers
             _context.Parfums.Add(parfum);
             await _context.SaveChangesAsync();
 
-            await _auditLogService.CreateLogAsync("admin@olfactive.com", "Administrateur", "PRODUIT_AJOUT", $"Ajout du produit '{parfum.Nom}' au catalogue (Prix : {parfum.Prix} €).");
+            await _auditLogService.CreateLogAsync("admin@olfactive.com", "Administrateur", "Admin", "PRODUIT_AJOUT", $"Ajout du produit '{parfum.Nom}' au catalogue (Prix : {parfum.Prix} €).");
 
             return CreatedAtAction(nameof(GetParfums), new { id = parfum.Id }, parfum);
         }
@@ -59,7 +59,7 @@ namespace OlfactiveParfum.Backend.Controllers
             try
             {
                 await _context.SaveChangesAsync();
-                await _auditLogService.CreateLogAsync("admin@olfactive.com", "Administrateur", "PRODUIT_MAJ", $"Mise à jour du produit n°{id} : '{parfum.Nom}' (Prix : {parfum.Prix} €, Stock : {parfum.Stock}).");
+                await _auditLogService.CreateLogAsync("admin@olfactive.com", "Administrateur", "Admin", "PRODUIT_MAJ", $"Mise à jour du produit n°{id} : '{parfum.Nom}' (Prix : {parfum.Prix} €, Stock : {parfum.Stock}).");
             }
             catch (DbUpdateConcurrencyException)
             {

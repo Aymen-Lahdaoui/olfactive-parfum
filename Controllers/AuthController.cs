@@ -71,7 +71,7 @@ namespace OlfactiveParfum.Backend.Controllers
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
-            await _auditLogService.CreateLogAsync(user.Email, user.Nom, "INSCRIPTION", $"Nouveau compte client enregistré au nom de {user.Nom} ({user.Email}).");
+            await _auditLogService.CreateLogAsync(user.Email, user.Nom, "Client", "INSCRIPTION", $"Nouveau compte client enregistré au nom de {user.Nom} ({user.Email}).");
 
             return Ok(new { message = "Inscription réussie." });
         }
@@ -98,7 +98,7 @@ namespace OlfactiveParfum.Backend.Controllers
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
-            await _auditLogService.CreateLogAsync("admin@olfactive.com", "Administrateur", "COLLABORATEUR_CREATION", $"Nouveau collaborateur créé : {user.Nom} avec le rôle {user.Role}.");
+            await _auditLogService.CreateLogAsync("admin@olfactive.com", "Administrateur", "Admin", "COLLABORATEUR_CREATION", $"Nouveau collaborateur créé : {user.Nom} avec le rôle {user.Role}.");
 
             return Ok(new { message = "Membre du personnel enregistré avec succès." });
         }
@@ -177,6 +177,8 @@ namespace OlfactiveParfum.Backend.Controllers
                     u.Nom, 
                     u.Email, 
                     u.Role, 
+                    u.Telephone,
+                    u.IsActive,
                     u.CreatedAt 
                 })
                 .ToListAsync();
@@ -195,7 +197,7 @@ namespace OlfactiveParfum.Backend.Controllers
             _context.Users.Remove(user);
             await _context.SaveChangesAsync();
 
-            await _auditLogService.CreateLogAsync("admin@olfactive.com", "Administrateur", "COLLABORATEUR_SUPPRESSION", $"Suppression du collaborateur {user.Nom} ({user.Role}, {user.Email}) de l'équipe.");
+            await _auditLogService.CreateLogAsync("admin@olfactive.com", "Administrateur", "Admin", "COLLABORATEUR_SUPPRESSION", $"Suppression du collaborateur {user.Nom} ({user.Role}, {user.Email}) de l'équipe.");
 
             return Ok(new { message = "Collaborateur supprimé avec succès." });
         }

@@ -120,9 +120,11 @@ using (var scope = app.Services.CreateScope())
                     ""DateAction""  TIMESTAMP   NOT NULL DEFAULT NOW(),
                     ""UserEmail""   TEXT        NOT NULL DEFAULT '',
                     ""UserNom""     TEXT        NOT NULL DEFAULT '',
+                    ""UserRole""    TEXT        NOT NULL DEFAULT '',
                     ""Action""      TEXT        NOT NULL DEFAULT '',
                     ""Description""  TEXT        NOT NULL DEFAULT ''
                 );
+                ALTER TABLE ""AuditLogs"" ADD COLUMN IF NOT EXISTS ""UserRole"" TEXT NOT NULL DEFAULT '';
                 CREATE INDEX IF NOT EXISTS ""IX_AuditLogs_DateAction"" ON ""AuditLogs"" (""DateAction"");
             ");
         }
@@ -252,6 +254,32 @@ using (var scope = app.Services.CreateScope())
                     Role = "Personnel",
                     Telephone = "+212645582265",
                     IsActive = true
+                }
+            );
+            context.SaveChanges();
+        }
+
+        // Si la table AuditLogs est vide, on ajoute des entrées de démarrage pour que l'interface ne soit pas vide à l'initialisation
+        if (!context.AuditLogs.Any())
+        {
+            context.AuditLogs.AddRange(
+                new AuditLog
+                {
+                    DateAction = DateTime.UtcNow.AddMinutes(-30),
+                    UserEmail = "système@olfactive.com",
+                    UserNom = "Système",
+                    UserRole = "Système",
+                    Action = "SYSTEM_START",
+                    Description = "Démarrage réussi de l'Atelier Olfactive. Journalisation d'activité active."
+                },
+                new AuditLog
+                {
+                    DateAction = DateTime.UtcNow.AddMinutes(-15),
+                    UserEmail = "admin@olfactive.com",
+                    UserNom = "Maison Admin",
+                    UserRole = "Admin",
+                    Action = "PRODUIT_MAJ",
+                    Description = "Configuration initiale du catalogue de fragrances de luxe."
                 }
             );
             context.SaveChanges();

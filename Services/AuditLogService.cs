@@ -7,7 +7,7 @@ namespace OlfactiveParfum.Backend.Services
 {
     public interface IAuditLogService
     {
-        Task CreateLogAsync(string email, string nom, string action, string description);
+        Task CreateLogAsync(string email, string nom, string role, string action, string description);
     }
 
     public class AuditLogService : IAuditLogService
@@ -19,7 +19,7 @@ namespace OlfactiveParfum.Backend.Services
             _context = context;
         }
 
-        public async Task CreateLogAsync(string email, string nom, string action, string description)
+        public async Task CreateLogAsync(string email, string nom, string role, string action, string description)
         {
             try
             {
@@ -28,6 +28,7 @@ namespace OlfactiveParfum.Backend.Services
                     DateAction = DateTime.UtcNow,
                     UserEmail = email ?? "système@olfactive.com",
                     UserNom = nom ?? "Système",
+                    UserRole = role ?? "Système",
                     Action = action ?? "INCONNU",
                     Description = description ?? string.Empty
                 };

@@ -52,6 +52,7 @@ namespace OlfactiveParfum.Backend.Controllers
                 DateAction = System.DateTime.UtcNow,
                 UserEmail = request.UserEmail,
                 UserNom = request.UserNom,
+                UserRole = request.UserRole,
                 Action = request.Action,
                 Description = request.Description
             };
@@ -70,7 +71,7 @@ namespace OlfactiveParfum.Backend.Controllers
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == email.ToLower());
             if (user == null || user.Role != "Admin")
             {
-                return Forbid();
+                return StatusCode(403, new { message = "Accès refusé. Réservé aux administrateurs." });
             }
 
             _context.AuditLogs.RemoveRange(_context.AuditLogs);
@@ -84,6 +85,7 @@ namespace OlfactiveParfum.Backend.Controllers
     {
         public string UserEmail { get; set; } = string.Empty;
         public string UserNom { get; set; } = string.Empty;
+        public string UserRole { get; set; } = string.Empty;
         public string Action { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
     }

@@ -87,7 +87,7 @@ namespace OlfactiveParfum.Backend.Controllers
                 0m
             );
 
-            await _auditLogService.CreateLogAsync(nouvelleCommande.ClientEmail, nouvelleCommande.ClientNom, "COMMANDE_CREATION", $"Commande n°{nouvelleCommande.Id} enregistrée par le client {nouvelleCommande.ClientNom}.");
+            await _auditLogService.CreateLogAsync(nouvelleCommande.ClientEmail, nouvelleCommande.ClientNom, "Client", "COMMANDE_CREATION", $"Commande n°{nouvelleCommande.Id} enregistrée par le client {nouvelleCommande.ClientNom}.");
 
             return Ok(nouvelleCommande);
         }
@@ -103,7 +103,7 @@ namespace OlfactiveParfum.Backend.Controllers
 
             await _context.SaveChangesAsync();
 
-            await _auditLogService.CreateLogAsync("admin@olfactive.com", "Administrateur", "COMMANDE_ASSIGNATION", $"La commande n°{commande.Id} a été attribuée au livreur ID: {request.LivreurId}.");
+            await _auditLogService.CreateLogAsync("admin@olfactive.com", "Administrateur", "Admin", "COMMANDE_ASSIGNATION", $"La commande n°{commande.Id} a été attribuée au livreur ID: {request.LivreurId}.");
 
             return Ok(new { message = "Livreur assigné avec succès !" });
         }
@@ -157,7 +157,20 @@ namespace OlfactiveParfum.Backend.Controllers
             // ✉️ Email au client
             _ = _emailService.SendOrderStatusUpdateAsync(commande.ClientEmail, commande.ClientNom, commande.Id, newStatut);
 
-            await _auditLogService.CreateLogAsync("système@olfactive.com", "Système", "COMMANDE_STATUT_MAJ", $"Changement de statut pour la commande n°{commande.Id} : '{newStatut}'.");
+            var userEmail = "système@olfactive.com";
+            var userNom = "Système";
+            var userRole = "Système";
+            if (commande.LivreurId.HasValue)
+            {
+                var liv = await _context.Users.FindAsync(commande.LivreurId.Value);
+                if (liv != null)
+                {
+                    userEmail = liv.Email;
+                    userNom = liv.Nom;
+                    userRole = "Livreur";
+                }
+            }
+            await _auditLogService.CreateLogAsync(userEmail, userNom, userRole, "COMMANDE_STATUT_MAJ", $"Changement de statut pour la commande n°{commande.Id} : '{newStatut}'.");
 
             return Ok(new { message = "Statut mis à jour avec succès !" });
         }
@@ -187,7 +200,7 @@ namespace OlfactiveParfum.Backend.Controllers
             // ✉️ Email
             _ = _emailService.SendOrderStatusUpdateAsync(commande.ClientEmail, commande.ClientNom, commande.Id, "Annulé", request.Commentaire);
 
-            await _auditLogService.CreateLogAsync(commande.ClientEmail, commande.ClientNom, "COMMANDE_ANNULATION", $"La commande n°{commande.Id} a été annulée. Raison : {request.Commentaire}");
+            await _auditLogService.CreateLogAsync(commande.ClientEmail, commande.ClientNom, "Client", "COMMANDE_ANNULATION", $"La commande n°{commande.Id} a été annulée. Raison : {request.Commentaire}");
 
             return Ok(new { message = "Commande annulée avec succès !" });
         }

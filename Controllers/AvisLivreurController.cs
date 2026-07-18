@@ -127,7 +127,7 @@ namespace OlfactiveParfum.Backend.Controllers
             await _context.SaveChangesAsync();
 
             var nameLivreur = await _context.Users.Where(u => u.Id == commande.LivreurId.Value).Select(u => u.Nom).FirstOrDefaultAsync() ?? "Livreur";
-            await _auditLogService.CreateLogAsync(request.ClientEmail, request.ClientNom, "LIVREUR_EVALUATION", $"Évaluation du livreur {nameLivreur} par {request.ClientNom} (Commande n°{request.CommandeId}, Note : {request.Note}/5).");
+            await _auditLogService.CreateLogAsync(request.ClientEmail, request.ClientNom, "Client", "LIVREUR_EVALUATION", $"Évaluation du livreur {nameLivreur} par {request.ClientNom} (Commande n°{request.CommandeId}, Note : {request.Note}/5).");
 
             return Ok(new { message = "Évaluation du livreur enregistrée avec succès !", avis });
         }
